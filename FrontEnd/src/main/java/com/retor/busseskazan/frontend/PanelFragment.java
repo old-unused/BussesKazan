@@ -45,8 +45,8 @@ public class PanelFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         parent = getActivity();
-        loader = Loader.getInstance(getActivity(), "http://data.kzn.ru:8082/api/v0/dynamic_datasets/bus.json");
-        adapter = new ArrayAdapter<String>(getActivity().getApplicationContext(), android.R.layout.simple_spinner_dropdown_item, getBusNumbers(loader.getBuses()));
+/*        loader = Loader.getInstance(getActivity(), "http://data.kzn.ru:8082/api/v0/dynamic_datasets/bus.json");
+        adapter = new ArrayAdapter<String>(getActivity().getApplicationContext(), android.R.layout.simple_spinner_dropdown_item, getBusNumbers(loader.getBuses()));*/
     }
 
     private ArrayList<String> getBusNumbers(ArrayList<Bus> array) {

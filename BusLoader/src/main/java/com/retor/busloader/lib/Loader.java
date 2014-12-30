@@ -8,6 +8,7 @@ import android.net.NetworkInfo;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -30,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by retor on 29.12.2014.
  */
-public class Loader implements TaskInterface, MapWorkerInterface {
+public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap> {
 
     private String url;
     private ArrayList<Bus> buses;
@@ -43,20 +44,20 @@ public class Loader implements TaskInterface, MapWorkerInterface {
 
     protected static volatile Loader instance = null;
 
-    public static Loader getInstance(Activity activity, String url_from){
+    public static Loader getInstance(Activity activity, String url_from, SupportMapFragment fragment){
         Loader localInstance = instance;
         if (localInstance == null) {
             synchronized (Loader.class) {
                 localInstance = instance;
                 if (localInstance == null) {
-                    instance = localInstance = new Loader(activity, url_from);
+                    instance = localInstance = new Loader(activity, url_from, fragment);
                 }
             }
         }
         return instance;
     }
 
-    protected Loader(final Activity activity, String url) {
+    protected Loader(final Activity activity, String url, SupportMapFragment fragment) {
         this.activity = activity;
         this.url = url;
         this.context = this.activity.getApplicationContext();
@@ -77,6 +78,8 @@ public class Loader implements TaskInterface, MapWorkerInterface {
         }else{
             ((TaskListener)activity).onLoadingError("No internet connection");
         }
+        map = fragment.getMap();
+        setupMap(fragment);
     }
 
     private boolean isConnected() {
@@ -185,18 +188,22 @@ public class Loader implements TaskInterface, MapWorkerInterface {
     }
 
     @Override
-    public GoogleMap setupMap(GoogleMap map) throws NullPointerException{
-        if (isNull(this.map)){
-            map.setTrafficEnabled(true);
-            map.setBuildingsEnabled(true);
-            map.setMyLocationEnabled(true);
-            if (isLocationEnabled())
-                map.setMyLocationEnabled(true);
-            else
-                ((TaskListener)activity).onLoadingError("Location service is OFF");
-            this.map = map;
+    public GoogleMap getMap() {
+        return this.map;
+    }
+
+    @Override
+    public void setupMap(SupportMapFragment fragment) throws NullPointerException{
+        if (isNull(map)){
+            map = fragment.getMap();
         }
-        return map;
+        map.setTrafficEnabled(true);
+        map.setBuildingsEnabled(true);
+        map.setMyLocationEnabled(true);
+        if (isLocationEnabled())
+            map.setMyLocationEnabled(true);
+        else
+            ((TaskListener)activity).onLoadingError("Location service is OFF");
     }
 
     @Override
@@ -208,7 +215,7 @@ public class Loader implements TaskInterface, MapWorkerInterface {
     }
 
     @Override
-    public void drawMarkers(GoogleMap map, ArrayList<Bus> array) {
+    public void drawMarkers(ArrayList<Bus> array) {
         if (!isNull(map) && !array.isEmpty())
             for (Bus b:array){
                 MarkerOptions marker = new MarkerOptions();
@@ -219,13 +226,13 @@ public class Loader implements TaskInterface, MapWorkerInterface {
     }
 
     @Override
-    public void clearMap(GoogleMap map) {
+    public void clearMap() {
         if (!isNull(map))
             map.clear();
     }
 
     @Override
-    public void setupLocation(GoogleMap map) {
+    public void setupLocation() {
         if (!isNull(map) && isLocationEnabled())
             if (map.getMyLocation()!=null) {
                 CameraUpdate position = CameraUpdateFactory.newCameraPosition(new CameraPosition(new LatLng(map.getMyLocation().getLatitude(), map.getMyLocation().getLongitude()), 9, 30, 0));
