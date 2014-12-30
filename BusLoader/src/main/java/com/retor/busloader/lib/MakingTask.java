@@ -1,6 +1,7 @@
 package com.retor.busloader.lib;
 
 import android.os.AsyncTask;
+import com.retor.busloader.lib.interfaces.TaskListener;
 
 /**
  * Created by retor on 29.12.2014.

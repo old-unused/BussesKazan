@@ -2,6 +2,18 @@ package com.retor.busloader.lib;
 
 import android.app.Activity;
 import android.content.Context;
+import android.location.LocationManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.retor.busloader.lib.interfaces.MapWorkerInterface;
+import com.retor.busloader.lib.interfaces.TaskInterface;
+import com.retor.busloader.lib.interfaces.TaskListener;
 import org.json.JSONArray;
 import org.json.JSONException;
 
@@ -18,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by retor on 29.12.2014.
  */
-public class Loader implements TaskInterface{
+public class Loader implements TaskInterface, MapWorkerInterface {
 
     private String url;
     private ArrayList<Bus> buses;
@@ -26,6 +38,8 @@ public class Loader implements TaskInterface{
     private Activity activity;
     private MakingTask task;
     private ScheduledExecutorService executor;
+
+    private GoogleMap map;
 
     protected static volatile Loader instance = null;
 
@@ -47,30 +61,32 @@ public class Loader implements TaskInterface{
         this.url = url;
         this.context = this.activity.getApplicationContext();
         this.executor = Executors.newScheduledThreadPool(1);
-        executor.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                activity.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        task = new MakingTask((TaskListener)activity, Loader.this);
-                        task.execute();
-                    }
-                });
-            }
-        }, 0, 60, TimeUnit.SECONDS);
+        if (isConnected()) {
+            executor.scheduleAtFixedRate(new Runnable() {
+                @Override
+                public void run() {
+                    activity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            task = new MakingTask((TaskListener) activity, Loader.this);
+                            task.execute();
+                        }
+                    });
+                }
+            }, 0, 60, TimeUnit.SECONDS);
+        }else{
+            ((TaskListener)activity).onLoadingError("No internet connection");
+        }
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        buses = null;
-        activity = null;
-        if (!task.isCancelled())
-            task = null;
-        executor.shutdownNow();
-        executor.shutdown();
-        instance = null;
-        super.finalize();
+    private boolean isConnected() {
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo ni = cm.getActiveNetworkInfo();
+        if (ni != null && ni.isConnected()) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     protected String getResponseString(){
@@ -113,6 +129,18 @@ public class Loader implements TaskInterface{
         return buses;
     }
 
+    public ArrayList<Bus> getMarshrut(String number) throws NullPointerException{
+        ArrayList<Bus> out = new ArrayList<>();
+        if (buses!=null){
+            for (Bus b:buses){
+                if (b.getMarsh().equals(number))
+                    out.add(b);
+            }
+            return out;
+        }
+        throw new NullPointerException("Null marshrut");
+    }
+
     protected void setBuses(ArrayList<Bus> buses) {
         this.buses = buses;
     }
@@ -127,5 +155,82 @@ public class Loader implements TaskInterface{
     public void delListenerFromTask() {
         task.listener = null;
         task.cancel(true);
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        buses = null;
+        activity = null;
+        if (!task.isCancelled())
+            task = null;
+        executor.shutdownNow();
+        executor.shutdown();
+        instance = null;
+        super.finalize();
+    }
+
+    public void dispatch(){
+        delListenerFromTask();
+        map = null;
+        try {
+            finalize();
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        }
+    }
+
+    public boolean isLocationEnabled(){
+        LocationManager lm = (LocationManager)context.getSystemService(Context.LOCATION_SERVICE);
+        return !(!lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) && !lm.isProviderEnabled(LocationManager.GPS_PROVIDER) && !lm.isProviderEnabled(LocationManager.GPS_PROVIDER));
+    }
+
+    @Override
+    public GoogleMap setupMap(GoogleMap map) throws NullPointerException{
+        if (isNull(this.map)){
+            map.setTrafficEnabled(true);
+            map.setBuildingsEnabled(true);
+            map.setMyLocationEnabled(true);
+            if (isLocationEnabled())
+                map.setMyLocationEnabled(true);
+            else
+                ((TaskListener)activity).onLoadingError("Location service is OFF");
+            this.map = map;
+        }
+        return map;
+    }
+
+    @Override
+    public boolean isNull(GoogleMap map) {
+        if (map==null)
+            return true;
+        else
+            return false;
+    }
+
+    @Override
+    public void drawMarkers(GoogleMap map, ArrayList<Bus> array) {
+        if (!isNull(map) && !array.isEmpty())
+            for (Bus b:array){
+                MarkerOptions marker = new MarkerOptions();
+                marker.position(new LatLng(b.getLatitude(), b.getLongitude()));
+                marker.title(String.valueOf("Marshrut: " + b.getMarsh() + " Speed: " + b.getSpeed()));
+                map.addMarker(marker);
+            }
+    }
+
+    @Override
+    public void clearMap(GoogleMap map) {
+        if (!isNull(map))
+            map.clear();
+    }
+
+    @Override
+    public void setupLocation(GoogleMap map) {
+        if (!isNull(map) && isLocationEnabled())
+            if (map.getMyLocation()!=null) {
+                CameraUpdate position = CameraUpdateFactory.newCameraPosition(new CameraPosition(new LatLng(map.getMyLocation().getLatitude(), map.getMyLocation().getLongitude()), 9, 30, 0));
+                map.moveCamera(position);
+            }
+
     }
 }

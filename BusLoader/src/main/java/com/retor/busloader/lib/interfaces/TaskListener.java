@@ -1,4 +1,4 @@
-package com.retor.busloader.lib;
+package com.retor.busloader.lib.interfaces;
 
 /**
  * Created by retor on 29.12.2014.

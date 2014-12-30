@@ -1,4 +1,4 @@
-package com.retor.busloader.lib;
+package com.retor.busloader.lib.interfaces;
 
 import android.app.Activity;
 
