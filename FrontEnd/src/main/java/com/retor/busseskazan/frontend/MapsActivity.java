@@ -3,6 +3,7 @@ package com.retor.busseskazan.frontend;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
+import android.widget.Toast;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.retor.busloader.lib.Loader;
@@ -21,7 +22,6 @@ public class MapsActivity extends FragmentActivity implements TaskListener {
         loader = Loader.getInstance(this, data_url, ((SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map)));
     }
 
-
     @Override
     protected void onResume() {
         super.onResume();
@@ -36,8 +36,8 @@ public class MapsActivity extends FragmentActivity implements TaskListener {
     @Override
     public void onLoadingFinish(String msg) {
         Log.d("Task", msg);
-        if(mMap.isMyLocationEnabled() && loader.isLocationEnabled())
-            loader.setupLocation();
+/*        if(mMap.isMyLocationEnabled() && loader.isLocationEnabled())
+            loader.setupLocation();*/
         loader.clearMap();
         loader.drawMarkers(loader.getBuses());
     }
@@ -45,6 +45,7 @@ public class MapsActivity extends FragmentActivity implements TaskListener {
     @Override
     public void onLoadingError(String msg) {
         Log.d("Task", msg);
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
     @Override

@@ -17,4 +17,5 @@ public interface MapWorkerInterface<T> {
     public void clearMap();
     public void setupLocation();
     public T getMap();
+    public void whatNearMe();
 }

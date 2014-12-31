@@ -2,9 +2,11 @@ package com.retor.busloader.lib;
 
 import android.app.Activity;
 import android.content.Context;
+import android.location.Location;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.util.Log;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -97,14 +99,14 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap> {
         StringBuilder builder = new StringBuilder();
         try {
             URLConnection connection = new URL(url).openConnection();
-            connection.setConnectTimeout(120);
+            connection.setConnectTimeout(500);
             String tmp;
             BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()), 8192);
             while ((tmp = reader.readLine())!=null){
                 builder.append(tmp);
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            ((TaskListener)activity).onLoadingError(e.getMessage());
         }
         out = builder.toString();
         if (out!=null)
@@ -193,6 +195,21 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap> {
     }
 
     @Override
+    public void whatNearMe() {
+        if (!isNull(map) && map.isMyLocationEnabled() && isLocationEnabled()){
+            LatLng me = new LatLng(map.getMyLocation().getLatitude(), map.getMyLocation().getLongitude());
+            float[] res = new float[100];
+            for (Bus b:buses){
+                LatLng buska = new LatLng(b.getLatitude(),b.getLongitude());
+                Location.distanceBetween(me.latitude, me.longitude, buska.latitude, buska.longitude,res);
+            }
+            for (float f:res){
+                Log.d("Distance", String.valueOf(f));
+            }
+        }
+    }
+
+    @Override
     public void setupMap(SupportMapFragment fragment) throws NullPointerException{
         if (isNull(map)){
             map = fragment.getMap();
@@ -223,6 +240,7 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap> {
                 marker.title(String.valueOf("Marshrut: " + b.getMarsh() + " Speed: " + b.getSpeed()));
                 map.addMarker(marker);
             }
+        whatNearMe();
     }
 
     @Override
