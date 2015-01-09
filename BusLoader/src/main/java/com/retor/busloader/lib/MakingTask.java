@@ -36,12 +36,6 @@ public class MakingTask extends AsyncTask<Void,Void,Void> {
     @Override
     protected void onPostExecute(Void aVoid) {
         listener.onLoadingFinish(TaskListener.FINISH);
-        try {
-            this.cancel(true);
-            this.finalize();
-        } catch (Throwable throwable) {
-            throwable.printStackTrace();
-        }
         super.onPostExecute(aVoid);
     }
 }

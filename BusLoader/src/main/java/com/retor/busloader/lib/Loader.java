@@ -33,16 +33,18 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by retor on 29.12.2014.
  */
-public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap> {
+public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap>, TaskListener {
 
+    private final String data_url = "http://data.kzn.ru:8082/api/v0/dynamic_datasets/bus.json";
     private String url;
     private ArrayList<Bus> buses;
     private Context context;
     private Activity activity;
     private MakingTask task;
     private ScheduledExecutorService executor;
-
+    private SupportMapFragment fragment;
     private GoogleMap map;
+    private TaskListener taskListener;
 
     protected static volatile Loader instance = null;
 
@@ -71,16 +73,18 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap> {
                     activity.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            task = new MakingTask((TaskListener) activity, Loader.this);
+                            task = new MakingTask(Loader.this, Loader.this);
                             task.execute();
+
                         }
                     });
                 }
             }, 0, 60, TimeUnit.SECONDS);
         }else{
-            ((TaskListener)activity).onLoadingError("No internet connection");
+            onLoadingError("No internet connection");
         }
-        map = fragment.getMap();
+        this.fragment = fragment;
+        this.map = fragment.getMap();
         setupMap(fragment);
     }
 
@@ -97,6 +101,10 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap> {
     protected String getResponseString(){
         String out = null;
         StringBuilder builder = new StringBuilder();
+     //for tests start
+        if (url==null)
+            url=data_url;
+     //end test
         try {
             URLConnection connection = new URL(url).openConnection();
             connection.setConnectTimeout(500);
@@ -106,7 +114,8 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap> {
                 builder.append(tmp);
             }
         } catch (IOException e) {
-            ((TaskListener)activity).onLoadingError(e.getMessage());
+            final IOException error = e;
+            onLoadingError(error.getMessage());
         }
         out = builder.toString();
         if (out!=null)
@@ -153,7 +162,7 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap> {
     @Override
     public void putListenerinTask(Activity activity) {
         this.activity = activity;
-        task.listener = (TaskListener)activity;
+        task.listener = this;
     }
 
     @Override
@@ -162,26 +171,15 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap> {
         task.cancel(true);
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        buses = null;
-        activity = null;
-        if (!task.isCancelled())
-            task = null;
-        executor.shutdownNow();
-        executor.shutdown();
-        instance = null;
-        super.finalize();
-    }
-
     public void dispatch(){
         delListenerFromTask();
+        executor.shutdown();
         map = null;
-        try {
-            finalize();
-        } catch (Throwable throwable) {
-            throwable.printStackTrace();
-        }
+        buses = null;
+        activity = null;
+        executor.shutdown();
+        task = null;
+        instance = null;
     }
 
     public boolean isLocationEnabled(){
@@ -197,14 +195,18 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap> {
     @Override
     public void whatNearMe() {
         if (!isNull(map) && map.isMyLocationEnabled() && isLocationEnabled()){
-            LatLng me = new LatLng(map.getMyLocation().getLatitude(), map.getMyLocation().getLongitude());
-            float[] res = new float[100];
-            for (Bus b:buses){
-                LatLng buska = new LatLng(b.getLatitude(),b.getLongitude());
-                Location.distanceBetween(me.latitude, me.longitude, buska.latitude, buska.longitude,res);
-            }
-            for (float f:res){
-                Log.d("Distance", String.valueOf(f));
+            Location location;
+            LatLng me = null;
+            if ((location=map.getMyLocation())!=null) {
+                me = new LatLng(location.getLatitude(), location.getLongitude());
+                float[] res = new float[100];
+                for (Bus b : buses) {
+                    LatLng buska = new LatLng(b.getLatitude(), b.getLongitude());
+                    Location.distanceBetween(me.latitude, me.longitude, buska.latitude, buska.longitude, res);
+                }
+                for (float f : res) {
+                    Log.d("Distance", String.valueOf(f));
+                }
             }
         }
     }
@@ -220,7 +222,7 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap> {
         if (isLocationEnabled())
             map.setMyLocationEnabled(true);
         else
-            ((TaskListener)activity).onLoadingError("Location service is OFF");
+            onLoadingError("Location service is OFF");
     }
 
     @Override
@@ -257,5 +259,36 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap> {
                 map.moveCamera(position);
             }
 
+    }
+
+    private boolean hasInterface(Activity activity){
+        if (activity instanceof TaskListener)
+            return true;
+        else
+            return false;
+    }
+
+    @Override
+    public void onLoadingStarted(String msg) {
+        if (hasInterface(activity)){
+            taskListener = (TaskListener)activity;
+            taskListener.onLoadingStarted(msg);
+        }
+    }
+
+    @Override
+    public void onLoadingFinish(String msg) {
+        if (hasInterface(activity)){
+            taskListener = (TaskListener)activity;
+            taskListener.onLoadingFinish(msg);
+        }
+    }
+
+    @Override
+    public void onLoadingError(String msg) {
+        if (hasInterface(activity)){
+            taskListener = (TaskListener)activity;
+            taskListener.onLoadingError(msg);
+        }
     }
 }

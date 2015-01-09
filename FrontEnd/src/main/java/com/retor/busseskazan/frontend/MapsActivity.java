@@ -31,6 +31,7 @@ public class MapsActivity extends FragmentActivity implements TaskListener {
     @Override
     public void onLoadingStarted(String msg) {
         Log.d("Task", msg);
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -40,6 +41,7 @@ public class MapsActivity extends FragmentActivity implements TaskListener {
             loader.setupLocation();*/
         loader.clearMap();
         loader.drawMarkers(loader.getBuses());
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
     @Override
