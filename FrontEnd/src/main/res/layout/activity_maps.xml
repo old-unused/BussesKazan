@@ -4,16 +4,22 @@
               android:orientation="vertical"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
-              android:weightSum="2">
-    <fragment class="com.retor.busseskazan.frontend.PanelFragment"
-            android:layout_weight="1"
+              android:weightSum="3">
+    <Spinner
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/spinnerMarshrut"
+            android:layout_gravity="left"
+            android:spinnerMode="dialog"
+            android:theme="@android:style/Theme.Holo.Light"
+            android:gravity="center|center_vertical|center_horizontal"
+            android:textAlignment="center"
+            style="@android:style/Widget.TextView.SpinnerItem"
+            />
+    <fragment
+            android:layout_weight="2.60"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/panel"/>
-    <fragment
-            android:layout_weight="1"
-            android:layout_width="fill_parent"
-            android:layout_height="fill_parent"
             android:id="@+id/map"
             tools:context=".MapsActivity"
             android:name="com.google.android.gms.maps.SupportMapFragment"

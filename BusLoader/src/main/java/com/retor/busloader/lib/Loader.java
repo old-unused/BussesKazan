@@ -26,6 +26,7 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -107,7 +108,7 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap>, Tas
      //end test
         try {
             URLConnection connection = new URL(url).openConnection();
-            connection.setConnectTimeout(500);
+            connection.setConnectTimeout(1200);
             String tmp;
             BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()), 8192);
             while ((tmp = reader.readLine())!=null){
@@ -157,6 +158,21 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap>, Tas
 
     protected void setBuses(ArrayList<Bus> buses) {
         this.buses = buses;
+    }
+
+    public ArrayList<String> getBusNumbers(){
+        ArrayList<String> out = new ArrayList<>();
+        if (buses != null) {
+            for (Bus b : buses) {
+                if (!out.contains(b.getMarsh()))
+                    out.add(b.getMarsh());
+            }
+            Collections.sort(out);
+            if (out.contains("0"))
+                out.remove("0");
+            return out;
+        }else
+            throw new NullPointerException("Busses null");
     }
 
     @Override
@@ -235,14 +251,16 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap>, Tas
 
     @Override
     public void drawMarkers(ArrayList<Bus> array) {
-        if (!isNull(map) && !array.isEmpty())
-            for (Bus b:array){
-                MarkerOptions marker = new MarkerOptions();
+        if (!isNull(map) && !array.isEmpty()) {
+            clearMap();
+            MarkerOptions marker = new MarkerOptions();
+            for (Bus b : array) {
                 marker.position(new LatLng(b.getLatitude(), b.getLongitude()));
                 marker.title(String.valueOf("Marshrut: " + b.getMarsh() + " Speed: " + b.getSpeed()));
                 map.addMarker(marker);
             }
-        whatNearMe();
+            whatNearMe();
+        }
     }
 
     @Override
@@ -282,13 +300,20 @@ public class Loader implements TaskInterface, MapWorkerInterface<GoogleMap>, Tas
             taskListener = (TaskListener)activity;
             taskListener.onLoadingFinish(msg);
         }
+        drawMarkers(buses);
     }
 
     @Override
-    public void onLoadingError(String msg) {
+    public void onLoadingError(final String msg) {
         if (hasInterface(activity)){
             taskListener = (TaskListener)activity;
-            taskListener.onLoadingError(msg);
+            //if this method run not from task, need run in runOnUiThread
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    taskListener.onLoadingError(msg);
+                }
+            });
         }
     }
 }

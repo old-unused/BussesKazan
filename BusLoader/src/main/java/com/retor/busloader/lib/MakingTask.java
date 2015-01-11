@@ -3,10 +3,12 @@ package com.retor.busloader.lib;
 import android.os.AsyncTask;
 import com.retor.busloader.lib.interfaces.TaskListener;
 
+import java.util.ArrayList;
+
 /**
  * Created by retor on 29.12.2014.
  */
-public class MakingTask extends AsyncTask<Void,Void,Void> {
+public class MakingTask extends AsyncTask<Void,Void,ArrayList<Bus>> {
 
     TaskListener listener;
     Loader loader;
@@ -23,9 +25,8 @@ public class MakingTask extends AsyncTask<Void,Void,Void> {
     }
 
     @Override
-    protected Void doInBackground(Void... params) {
-        loader.setBuses(loader.createArrayFromResponse(loader.getResponseString()));
-        return null;
+    protected ArrayList<Bus> doInBackground(Void... params) {
+        return loader.createArrayFromResponse(loader.getResponseString());
     }
 
     @Override
@@ -34,8 +35,9 @@ public class MakingTask extends AsyncTask<Void,Void,Void> {
     }
 
     @Override
-    protected void onPostExecute(Void aVoid) {
+    protected void onPostExecute(ArrayList<Bus> array) {
+        loader.setBuses(array);
         listener.onLoadingFinish(TaskListener.FINISH);
-        super.onPostExecute(aVoid);
+        super.onPostExecute(array);
     }
 }
